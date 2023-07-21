@@ -7,7 +7,7 @@ go-csv is a powerful and easy-to-use Go language CSV processing library, designe
 ## Install
 
 ````bash
-go get github.com/Generalzy/go-csv
+go get github.com/generalzy/go-csv
 ````
 
 
