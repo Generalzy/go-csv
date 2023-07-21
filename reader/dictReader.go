@@ -2,8 +2,11 @@ package reader
 
 import (
 	"errors"
+	gocsv "github.com/generalzy/go-csv"
 	"io"
 	"os"
+	"reflect"
+	"strconv"
 )
 
 type DictReader struct {
@@ -32,7 +35,7 @@ func (d *DictReader) Close() error {
 	return d.rd.Close()
 }
 
-func (d *DictReader) ReadLine() (map[string]string, error) {
+func (d *DictReader) ReadDictLine() (map[string]string, error) {
 	dictLine := make(map[string]string, d.rd.headLength)
 
 	line, err := d.rd.ReadLine()
@@ -47,11 +50,11 @@ func (d *DictReader) ReadLine() (map[string]string, error) {
 	return dictLine, nil
 }
 
-func (d *DictReader) ReadLines() ([]map[string]string, error) {
+func (d *DictReader) ReadDictLines() ([]map[string]string, error) {
 	dictLines := make([]map[string]string, 0, 0)
 
 	for {
-		dictLine, err := d.ReadLine()
+		dictLine, err := d.ReadDictLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -71,4 +74,61 @@ func (d *DictReader) Head() []string {
 
 func (d *DictReader) Scope() int {
 	return d.rd.Scope()
+}
+
+func (d *DictReader) BindWithJson(dst interface{}) error {
+	v := reflect.ValueOf(dst)
+
+	// Check if dst is a pointer to a struct.
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return gocsv.InvalidTypeError
+	}
+
+	// Get the struct type from the interface.
+	t := v.Elem().Type()
+
+	// Read line
+	m, err := d.ReadDictLine()
+	if err != nil {
+		return err
+	}
+
+	// Loop through the struct fields.
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		// Get the "csv" tag.
+		tag := field.Tag.Get(gocsv.Tag)
+
+		// Skip fields without the "csv" tag.
+		if tag == "" {
+			continue
+		}
+
+		var value reflect.Value
+
+		switch field.Type.Kind() {
+		case reflect.String:
+			value = reflect.ValueOf(m[tag])
+		case reflect.Int:
+			intValue, _ := strconv.Atoi(m[tag])
+			value = reflect.ValueOf(intValue)
+		case reflect.Float64 | reflect.Float32:
+			floatValue, _ := strconv.ParseFloat(m[tag], 64)
+			value = reflect.ValueOf(floatValue)
+		default:
+			return gocsv.UnsupportedTypeError
+		}
+		// Extract the value using reflection.
+
+		// Set the value in the struct field.
+		dstField := v.Elem().Field(i)
+
+		if !dstField.CanSet() {
+			return gocsv.CannotSetError
+		}
+
+		dstField.Set(value)
+	}
+
+	return nil
 }

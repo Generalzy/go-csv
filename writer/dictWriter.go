@@ -1,9 +1,7 @@
 package writer
 
 import (
-	"errors"
-	"fmt"
-	gocsv "github.com/genralzy/go-csv"
+	gocsv "github.com/generalzy/go-csv"
 	"reflect"
 	"strconv"
 )
@@ -28,7 +26,7 @@ func (d *DictWriter) Close() error {
 	return d.wt.Close()
 }
 
-func (d *DictWriter) writeDictLine(line map[string]string) error {
+func (d *DictWriter) WriteDictLine(line map[string]string) error {
 	lineSlice := make([]string, d.wt.headLength)
 
 	for index, field := range d.wt.head {
@@ -40,11 +38,20 @@ func (d *DictWriter) writeDictLine(line map[string]string) error {
 
 func (d *DictWriter) WriteDictLines(lines []map[string]string) error {
 	for _, line := range lines {
-		if err := d.writeDictLine(line); err != nil {
+		if err := d.WriteDictLine(line); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (d *DictWriter) WriteLines(lines []interface{}) error {
+	for _, line := range lines {
+		if err := d.WriteLine(line); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -54,13 +61,13 @@ func (d *DictWriter) WriteLine(line interface{}) error {
 	switch v.Kind() {
 	case reflect.Map:
 		dictLine, _ := line.(map[string]string)
-		return d.writeDictLine(dictLine)
+		return d.WriteDictLine(dictLine)
 	case reflect.Slice:
 		sliceLine, _ := line.([]string)
 		return d.wt.WriteLine(sliceLine)
 	case reflect.Pointer:
 		if v.IsNil() {
-			return errors.New("nil pointer")
+			return gocsv.NilPointerError
 		}
 		return d.WriteLine(v.Elem().Interface())
 	case reflect.Struct:
@@ -81,16 +88,18 @@ func (d *DictWriter) WriteLine(line interface{}) error {
 				fieldValStr = fieldVal.String()
 			case reflect.Int:
 				fieldValStr = strconv.FormatInt(fieldVal.Int(), 10)
+			case reflect.Float64 | reflect.Float32:
+				fieldValStr = strconv.FormatFloat(fieldVal.Float(), 'f', 2, 64)
 			default:
 				// Handle other types accordingly.
-				return fmt.Errorf("unsupported type for field %s", field.Name)
+				return gocsv.UnsupportedTypeError
 			}
 			l[fieldTagName] = fieldValStr
 		}
 
-		return d.writeDictLine(l)
+		return d.WriteDictLine(l)
 	default:
-		return errors.New("error type")
+		return gocsv.InvalidTypeError
 	}
 }
 

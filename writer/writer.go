@@ -2,7 +2,7 @@ package writer
 
 import (
 	"encoding/csv"
-	"errors"
+	gocsv "github.com/generalzy/go-csv"
 	"os"
 )
 
@@ -39,14 +39,14 @@ func (w *Writer) WriteHead(head []string) error {
 
 func (w *Writer) WriteLine(line []string) error {
 	if w.headLength == 0 {
-		return errors.New("must write head firstly")
+		return gocsv.MissingHeadError
 	}
 	return w.wt.Write(line)
 }
 
 func (w *Writer) WriteLines(lines [][]string) error {
 	if w.headLength == 0 {
-		return errors.New("must write head firstly")
+		return gocsv.MissingHeadError
 	}
 
 	return w.wt.WriteAll(lines)
