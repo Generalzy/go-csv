@@ -2,6 +2,8 @@ package reader
 
 import (
 	"encoding/csv"
+	"errors"
+	"io"
 	"os"
 )
 
@@ -54,6 +56,23 @@ func (r *Reader) ReadLine() ([]string, error) {
 
 func (r *Reader) ReadLines() ([][]string, error) {
 	return r.rd.ReadAll()
+}
+
+func (r *Reader) ReadWithFn(fn func(line []string) error) error {
+	for {
+		line, err := r.ReadLine()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		if err = fn(line); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *Reader) Head() []string {

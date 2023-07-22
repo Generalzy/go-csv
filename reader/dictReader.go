@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"encoding/json"
 	"errors"
 	gocsv "github.com/generalzy/go-csv"
 	"io"
@@ -27,12 +28,12 @@ func NewDictReader(filename string) (*DictReader, error) {
 	return &DictReader{rd: rd, Info: rd.Info}, nil
 }
 
-func (d *DictReader) readHead() ([]string, error) {
-	return d.rd.ReadHead()
-}
-
 func (d *DictReader) Close() error {
 	return d.rd.Close()
+}
+
+func (d *DictReader) readHead() ([]string, error) {
+	return d.rd.ReadHead()
 }
 
 func (d *DictReader) ReadDictLine() (map[string]string, error) {
@@ -68,6 +69,23 @@ func (d *DictReader) ReadDictLines() ([]map[string]string, error) {
 	return dictLines, nil
 }
 
+func (d *DictReader) ReadDictWith(fn func(dictLine map[string]string) error) error {
+	for {
+		dictLine, err := d.ReadDictLine()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		if err = fn(dictLine); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *DictReader) Head() []string {
 	return d.rd.Head()
 }
@@ -76,7 +94,7 @@ func (d *DictReader) Scope() int {
 	return d.rd.Scope()
 }
 
-func (d *DictReader) BindWithJson(dst interface{}) error {
+func (d *DictReader) BindWithStruct(dst interface{}) error {
 	v := reflect.ValueOf(dst)
 
 	// Check if dst is a pointer to a struct.
@@ -131,4 +149,13 @@ func (d *DictReader) BindWithJson(dst interface{}) error {
 	}
 
 	return nil
+}
+
+func (d *DictReader) BindWithJson() ([]byte, error) {
+	line, err := d.ReadDictLine()
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(line)
 }
