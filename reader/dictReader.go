@@ -159,3 +159,21 @@ func (d *DictReader) BindWithJson() ([]byte, error) {
 
 	return json.Marshal(line)
 }
+
+func (d *DictReader) SetComma(comma rune) {
+	d.rd.SetComma(comma)
+}
+
+func (d *DictReader) SetComment(comment rune) {
+	d.rd.SetComment(comment)
+}
+
+func (d *DictReader) SetLazyQuotes(fl bool) {
+	// default is false
+	d.rd.SetLazyQuotes(fl)
+}
+
+func (d *DictReader) SetTrimLeadingSpace(fl bool) {
+	// default is true
+	d.rd.SetTrimLeadingSpace(fl)
+}

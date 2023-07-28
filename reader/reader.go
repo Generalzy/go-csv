@@ -26,7 +26,10 @@ func NewReader(filename string) (*Reader, error) {
 		return nil, err
 	}
 
-	return &Reader{rd: csv.NewReader(fp), head: make([]string, 0, 0), fp: fp, Info: stat}, nil
+	rd := csv.NewReader(fp)
+	rd.TrimLeadingSpace = true
+	
+	return &Reader{rd: rd, head: make([]string, 0, 0), fp: fp, Info: stat}, nil
 }
 
 func (r *Reader) Close() error {
@@ -81,4 +84,22 @@ func (r *Reader) Head() []string {
 
 func (r *Reader) Scope() int {
 	return r.headLength
+}
+
+func (r *Reader) SetComma(comma rune) {
+	r.rd.Comma = comma
+}
+
+func (r *Reader) SetComment(comment rune) {
+	r.rd.Comment = comment
+}
+
+func (r *Reader) SetLazyQuotes(fl bool) {
+	// default is false
+	r.rd.LazyQuotes = fl
+}
+
+func (r *Reader) SetTrimLeadingSpace(fl bool) {
+	// default is true
+	r.rd.TrimLeadingSpace = fl
 }
